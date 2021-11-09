@@ -337,7 +337,7 @@ Type Mouse
 	the current window or graphics display.
 	End Rem
 	Function Location( xy:Float[] )
-		If Not TWindow.active Then Return
+		If Not TApp._active Then Return
 		bmx_glfw_glfwSetCursorPos( TWindow.active._windowPtr,xy[0],xy[1] )
 	End Function
 	
@@ -348,7 +348,7 @@ Type Mouse
 	the current window or graphics display.
 	End Rem
 	Function Location( x:Float,y:Float )
-		If Not TWindow.active Then Return
+		If Not TApp._active Then Return
 		bmx_glfw_glfwSetCursorPos( TWindow.active._windowPtr,x,y )
 	End Function
 	
@@ -369,7 +369,7 @@ Type Mouse
 	The returned value is relative to the left of the screen.
 	End Rem
 	Function X( v:Float )
-		If Not TWindow.active Then Return
+		If Not TApp._active Then Return
 		bmx_glfw_glfwSetCursorPos( TWindow.active._windowPtr,v,_Location[1,0] )
 	End Function
 	
@@ -390,7 +390,7 @@ Type Mouse
 	The returned value is relative to the top of the screen.
 	End Rem
 	Function Y( v:Float )
-		If Not TWindow.active Then Return
+		If Not TApp._active Then Return
 		bmx_glfw_glfwSetCursorPos( TWindow.active._windowPtr,_Location[0,0],v )
 	End Function
 	
@@ -472,8 +472,8 @@ Type Mouse
 	Function Cursor( index:Int )
 		If index=_cursor Then Return
 		.Cursor.Init()
-		For Local i:Int=0 Until TWindow.windows.Length
-			bmx_glfw_glfwSetCursor( TWindow.windows[i]._windowPtr,.Cursor.cursors[index]._cursor.cursorPtr )
+		For Local i:Int=0 Until TApp._windows.Length
+			bmx_glfw_glfwSetCursor( TApp._windows[i]._windowPtr,.Cursor.cursors[index]._cursor.cursorPtr )
 		Next
 		_cursor=index
 	End Function
@@ -484,8 +484,8 @@ Type Mouse
 	Global _visible:Int=GLFW_CURSOR_NORMAL
 	
 	Function UpdateCursor()
-		For Local i:Int=0 Until TWindow.windows.Length
-			bmx_glfw_glfwSetInputMode( TWindow.windows[i]._windowPtr,GLFW_CURSOR,_visible )
+		For Local i:Int=0 Until TApp._windows.Length
+			bmx_glfw_glfwSetInputMode( TApp._windows[i]._windowPtr,GLFW_CURSOR,_visible )
 		Next
 	End Function
 	
@@ -496,8 +496,8 @@ Type Mouse
 	Global in:Float[2],out:Float[2]
 	
 	Function OnCursorPosition( windowPtr:Byte Ptr,x:Double,y:Double )
-		If Not TWindow.active Then Return
-		If windowPtr<>TWindow.active._windowPtr Then Return
+		If Not TApp._active Then Return
+		If windowPtr<>TApp._active._windowPtr Then Return
 		
 		_Location[0,1]=_Location[0,0]
 		_Location[1,1]=_Location[1,0]
@@ -517,8 +517,8 @@ Type Mouse
 	End Function
 	
 	Function OnScroll( windowPtr:Byte Ptr,xOffset:Double,yOffset:Double )
-		If Not TWindow.active Then Return
-		If windowPtr<>TWindow.active._windowPtr Then Return
+		If Not TApp._active Then Return
+		If windowPtr<>TApp._active._windowPtr Then Return
 		_ZSpeed=Float( yOffset )
 	End Function
 End Type

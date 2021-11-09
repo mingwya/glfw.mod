@@ -678,14 +678,14 @@ Type TWindow
 	End Function
 	
 	Function _OnFocus( windowPtr:Byte Ptr,focused:Int )
-		For Local w:TWindow=EachIn windows
-			If w._windowPtr<>windowPtr Then Continue
+		For Local window:TWindow=EachIn windows
+			If window._windowPtr<>windowPtr Then Continue
 			If focused
-				w.OnFocus()
-				active=w
+				window.OnFocus()
+				active=window
 			Else
-				w.OnLostFocus()
-				If active=w Then active=Null
+				window.OnLostFocus()
+				If active=window Then active=Null
 			End If
 			Return
 		Next

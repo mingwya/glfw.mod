@@ -66,6 +66,43 @@ Type TApp
 	Protected
 	
 	Field _fps:Int,_fpsTime:Int
+	
+	Global windows:TWindow[8]
+	Global countWindows:Int=0
+	
+	Function AddWindow:Int( window:TWindow )
+		If windows.Length=countWindows Then window=windows[..windows.Length Shl 1]
+		windows[countWindows]=window
+		countWindows:+1
+		Return countWindows-1
+	End Function
+	
+	Function RemWindow:Int( window:TWindow )
+		For Local i:Int=0 To countWindows
+			If i=countWindows Then Return False
+			If windows[i]=window Then Exit
+		Next
+		Return RemWindow( i )
+	End Function
+	
+	Function RemWindow:Int( index:Int )
+		windows[index]=Null
+		countWindows:-1
+		If index=countWindows Or index=0 Then Return True
+		windows[index]=window[countWindows]
+		window[countWindows]=Null
+		Return True
+	End Function
+	
+	Function FocusWindow:Int( window:TWindow )
+		If windows[0]=window Then Return True
+		
+	End Function
+	
+	Function UnFocusWindow:Int( window:TWindow )
+		If windows[0]<>window Then Return True
+		
+	End Function
 End Type
 
 Rem
