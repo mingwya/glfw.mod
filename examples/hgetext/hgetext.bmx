@@ -44,7 +44,7 @@ Type TMyWindow Extends TExampleWindow
 		cnt:+1
 		Title( "Window="+cnt )
 		
-		mouse.Cursor( Cursor.Hand )
+		Mouse.Cursor( Cursor.Hand )
 	End Method
 	
 	Field r:Float
@@ -53,16 +53,16 @@ Type TMyWindow Extends TExampleWindow
 		Super.OnUpdate( dt )
 		r:+1.0*dt
 		
-		If Key.Hit( KEY.UP ) Then fa.lineKerning( fa.lineKerning()+1 )
-		If Key.Hit( KEY.DOWN ) Then fa.lineKerning( fa.lineKerning()-1 )
+		If Key.Hit( Key.UP ) Then fa.lineKerning( fa.lineKerning()+1 )
+		If Key.Hit( Key.DOWN ) Then fa.lineKerning( fa.lineKerning()-1 )
 	End Method
 	
 	Field xx#,yy#
 	
 	Method OnRender( canvas:TCanvas ) Override
 		'If App.ActiveWindow()=Self
-			xx=mouse.x()
-			yy=mouse.y()
+			xx=Mouse.x()
+			yy=Mouse.y()
 		'End If
 		
 		canvas.Font( fa )
@@ -78,14 +78,15 @@ Type TMyWindow Extends TExampleWindow
 	End Method
 End Type
 
-New TDeltaTimeApp
 New TMyWindow( New TMyWindow )
 
 Repeat
-	App.Update()
+	DeltaTimeApp.Update()
 	Local w:TWindow=TWindow(App.ActiveWindow())
 	If w
 		WriteStdout( w.title()+"~n" )
+	Else
+		WriteStdout( "not active windows~n" )
 	End If
 Forever
 

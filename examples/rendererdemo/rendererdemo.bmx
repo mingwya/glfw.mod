@@ -94,11 +94,10 @@ Type TMyWindow Extends TExampleWindow
 	End Method
 End Type
 
-New TDeltaTimeApp
 New TMyWindow
 
 Repeat
-	app.Update()
+	DeltaTimeApp.Update()
 Forever
 
 'create an orthographics projection matrix

@@ -5,7 +5,7 @@ Rem
 
 or
 
-cmdFunc( args:String[] )
+cmdFunc( args.. )
 End Rem
 
 Public
@@ -73,12 +73,35 @@ Type TConsoleStream Extends TStream 'Wrapper
 	End Method
 End Type
 
+Public
+
 Type TConsole
+	
+	Function Variable( name:String,v:String )
+		vars[name]=v
+	End Function
+	
+	Function Variable( name:String,v:Int )
+		vars[name]=String( v )
+	End Function
+	
+	Function Variable( name:String,v:Float )
+		vars[name]=String( v )
+	End Function
+	
+	Function Variable:String( name:String )
+		Return String( vars[name] )
+	End Function
+	
+	Private
+
 	Global inited:Int
-
 	Global state:Int
+	
 	Global height:Float, oldHeight:Float
-
+	
+	Global vars:THash=New THash
+	
 	Global names:String[0]
 	Global funcs:TFunction[0]
 
@@ -185,12 +208,20 @@ Type TConsole
 		
 		help=""
 		If l.Length>0 And r.length=0
-			For Local i:Int=0 Until names.Length
-				If names[i].StartsWith( l.ToLower() )
-					help=names[i]
-					Exit
+			For Local vk:String=EachIn vars.Keys()
+				If vk.StartsWith( l )
+					help=vk+" "
 				End If
 			Next
+			
+			If help=""
+				For Local i:Int=0 Until names.Length
+					If names[i].StartsWith( l.ToLower() )
+						help=names[i]+" "
+						Exit
+					End If
+				Next
+			End If
 		End If
 
 		If Key.Rep( Key.Left )
@@ -220,30 +251,10 @@ Type TConsole
 		End If
 			
 		If Key.Hit( Key.ENTER )
-			'DebugLog( ">>>Console.Enter!" )
-			Local c:String=( l+r ).Trim().ToLower()
+			Local cmd:String=( l+r ).Trim().ToLower()
 			l=""
 			r=""
-			If c<>""
-				c=c.Replace( "("," " ).Replace( ")"," " ).Replace( "   "," " ).Replace( "  "," " ).Replace( "~t"," " )
-				Local args:String[]=c.Split( " " )
-					
-				For Local i:Int=0 Until names.Length
-					If names[i]=args[0]
-						'funcs[i]( args[1..] )
-						If funcs[i] Then funcs[i].Invoke( args[1..] )
-						history=[ names[i] ]+history
-						historyPos=0
-						If history.Length>10 Then history=history[..10]
-						Exit
-					Else If i=names.Length-1
-						'cmdNotFound( args )
-						Print("Command: <$FFFFAAAA><ha>"+ args[0] + "</ha></$> not found!")
-						'in:+["Command: <$FFFFAAAA><ha>"+ args[0] + "</ha></$> not found!"]
-					End If
-				Next
-				
-			End If
+			If cmd<>"" Then Process( cmd )
 		End If
 			
 		If Key.Rep( Key.UP )
@@ -279,6 +290,50 @@ Type TConsole
 		End If
 		
 		Key.Flush()
+	End Function
+	
+	Function process( cmd:String )
+		cmd=cmd.Replace( "("," " ).Replace( ")"," " ).Replace( "   "," " ).Replace( "  "," " ).Replace( "~t"," " )
+		Local args:String[]=cmd.Split( " " )
+		
+		Local slug:String=args[0]
+		args=args[1..]
+		
+		If vars[slug]<>Null
+			If args.Length=0 Then args=[""]
+			
+			vars[slug]=args[0]
+			
+			Print( "Console var '"+slug+"' changet to:"+args[0] )
+			
+			Return
+		End If
+		
+		For Local i:Int=0 Until names.Length
+			If names[i]=slug 'args[0]
+				
+				Local argTypes:TTypeId[]=funcs[i].ArgTypes()
+				args=args[..argTypes.Length]
+				funcs[i].Invoke( args )
+				
+				'If argTypes.Length=0
+				'	funcs[i].Invoke( Null )
+				'Else
+				'	args=args[..argTypes.Length]
+				'	funcs[i].Invoke( args )
+				'End If
+				
+				history=[ names[i] ]+history
+				historyPos=0
+				If history.Length>10 Then history=history[..10]
+				Exit
+				
+			Else If i=names.Length-1
+				'cmdNotFound( args )
+				Print("Command: <$FFFFAAAA><ha>"+slug+"</ha></$> not found!")
+				'in:+["Command: <$FFFFAAAA><ha>"+ args[0] + "</ha></$> not found!"]
+			End If
+		Next
 	End Function
 
 	Function Draw( canvas:TCanvas,tween:Float )
@@ -357,6 +412,6 @@ Type TConsole
 	End Function 'AddCmd("cls", cmdCls)
 	
 	Function cmdEnd()
-		TApp.Terminate()
+		App.Terminate()
 	End Function
 End Type

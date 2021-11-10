@@ -1,134 +1,172 @@
 
 Public
 
-Rem
-	bbdoc: Application global variable.
-End Rem
-Global App:TApp
+TConsole.Variable( "fps",0 )
+TConsole.Variable( "memory",0 )
 
 Rem
 	bbdoc: Application base class.
 End Rem
-Type TApp
+Type App
 
 	Global fps:Int
 
 	Method New()
-		If App Then RuntimeError( "App is already exist." )
-		App=Self
-		
-		'bmx_glfw_glfwWindowHint( $00020004,False ) 'visible=false
-		TConsole.Init()
-	End Method
-
-	Method Update()
-		TJoystick.Update()
-		If TWindow.active
-			TWindow.active.OnUpdate()
-			TWindow.active.Render( False )
-		End If
-		For Local window:TWindow=EachIn TWindow.windows
-			If window=TWindow.active Then Continue
-			window.OnUpdate()
-			window.Render( False )
-		Next
-		PollSystem()
-		
-		_fps:+1
-		If MilliSecs()-_fpsTime>=1000
-			fps=_fps
-			_fps=0
-			_fpsTime=MilliSecs()
-		End If
+		RuntimeError( "Type App is not instancable." )
 	End Method
 	
 	Rem
 	bbdoc: Return app terminate state
 	returns: True if user has requested to terminate application
 	End Rem
+	Function Update()
+		
+		If _suspend
+			Repeat
+				Delay( 100 )
+				PollSystem()
+				If Not _suspend Then Exit
+			Forever
+		End If
+		
+		TJoystick.Update()
+		If _active
+			_active.OnUpdate()
+			_active.Render( False )
+		End If
+		For Local i:Int=0 Until _countWindows
+			If _windows[i]=_active Then Continue
+			_windows[i].OnUpdate()
+			_windows[i].Render( False )
+		Next
+		PollSystem()
+		
+		UpdateFps()
+	End Function
+	
+	Rem
+	bbdoc: Return app terminate state
+	returns: True if user has requested to terminate application
+	End Rem
 	Function Terminate()
+		'For Local i:Int=0 Until _countWindows
+		'	_windows[i].Free()
+		'Next
 		End
 	End Function
 	
-	Function ActiveWindow:TWindow()
-		Return TWindow.active
+	Rem
+	bbdoc: Return app terminate state
+	returns: True if user has requested to terminate application
+	End Rem
+	Function Suspend( state:Int=True )
+		_suspend=state
 	End Function
 	
-	Method Operator[]:TWindow( id:Int )
-		If id<0 Or id>=TWindow.Windows.Length Then Return Null
-		Return TWindow.Windows[id]
-	End Method
+	Rem
+	bbdoc: Return app terminate state
+	returns: True if user has requested to terminate application
+	End Rem
+	Function ActiveWindow:TWindow()
+		Return _active
+	End Function
 	
-	'Method ObjectEnumerator:TListEnum()
-	'	
-	'End Method
+	Rem
+	bbdoc: Return app terminate state
+	returns: True if user has requested to terminate application
+	End Rem
+	Function CountWindows:Int()
+		Return _countWindows
+	End Function
+	
+	Rem
+	bbdoc: Return app terminate state
+	returns: True if user has requested to terminate application
+	End Rem
+	Function GetWindow:TWindow( index:Int )
+		Return _windows[index]
+	End Function
 	
 	Protected
 	
-	Field _fps:Int,_fpsTime:Int
+	Global _fps:Int,_fpsTime:Int
 	
-	Global windows:TWindow[8]
-	Global countWindows:Int=0
+	Global _suspend:Int
+	
+	Global _active:TWindow
+	Global _windows:TWindow[1]
+	Global _countWindows:Int=0
+	
+	Function UpdateFps()
+		_fps:+1
+		If MilliSecs()-_fpsTime>=1000
+			fps=_fps
+			_fps=0
+			_fpsTime=MilliSecs()
+		End If
+	End Function
 	
 	Function AddWindow:Int( window:TWindow )
-		If windows.Length=countWindows Then window=windows[..windows.Length Shl 1]
-		windows[countWindows]=window
-		countWindows:+1
-		Return countWindows-1
+		If _windows.Length=_countWindows Then _windows=_windows[.._windows.Length Shl 1]
+		_windows[_countWindows]=window
+		_countWindows:+1
+		Return _countWindows-1
+	End Function
+	
+	Function GetWindowIndex:Int( window:TWindow )
+		For Local i:Int=0 Until _countWindows
+			If _windows[i]=window Then Return i
+		Next
+		Return -1
 	End Function
 	
 	Function RemWindow:Int( window:TWindow )
-		For Local i:Int=0 To countWindows
-			If i=countWindows Then Return False
-			If windows[i]=window Then Exit
-		Next
+		Local i:Int=GetWindowIndex( window )
+		If i=-1 Then Return False
 		Return RemWindow( i )
 	End Function
 	
 	Function RemWindow:Int( index:Int )
-		windows[index]=Null
-		countWindows:-1
-		If index=countWindows Or index=0 Then Return True
-		windows[index]=window[countWindows]
-		window[countWindows]=Null
+		_windows[index]=Null
+		_countWindows:-1
+		If index=_countWindows Then Return True
+		_windows[index]=_windows[_countWindows]
+		_windows[_countWindows]=Null
 		Return True
-	End Function
-	
-	Function FocusWindow:Int( window:TWindow )
-		If windows[0]=window Then Return True
-		
-	End Function
-	
-	Function UnFocusWindow:Int( window:TWindow )
-		If windows[0]<>window Then Return True
-		
 	End Function
 End Type
 
 Rem
 	bbdoc: Fixel rate logic application.
 End Rem
-Type TFixedLogicApp Extends TApp
+Type FixedLogicApp Extends App
 
 	Global tween:Float
 	
-	Method New( freq:Int )
-		Super.New()
+	Function Init( freq:Int )
 		Hertz( freq )
 		_ticker=MilliSecs()-_upTime
-	End Method
+	End Function
 	
-	Method Hertz:Int()
+	Function Hertz:Int()
 		Return _hertz
-	End Method
+	End Function
 	
-	Method Hertz( value:Int )
+	Function Hertz( value:Int )
 		_hertz=value
 		_upTime=1000.0/Float( _hertz )
-	End Method
+	End Function
 	
-	Method Update() Override
+	Function Update() Override
 		
+		If _suspend
+			Repeat
+				Delay( 100 )
+				PollSystem()
+				If Not _suspend Then Exit
+			Forever
+		End If
+
 		Local timeElapsed:Float
 			
 		Repeat
@@ -146,29 +184,26 @@ Type TFixedLogicApp Extends TApp
 			_ticker:+_upTime
 			
 			TJoystick.Update()
-			If TWindow.active
-				TWindow.active.OnUpdate()
+			If _active And Not _active.Hidden()
+				_active.OnUpdate()
 			End If
-			For Local i:Int=0 Until TWindow.windows.Length
-				If TWindow.windows[i]=TWindow.active Then Continue
-				TWindow.windows[i].OnUpdate()
+			For Local i:Int=0 Until _windows.Length
+				If _windows[i]=_active Then Continue
+				If _windows[i].Hidden() Then Continue
+				_windows[i].OnUpdate()
 			Next
 			PollSystem()
 		Next
 		
 		tween=Float( timeElapsed Mod _upTime )/_upTime
 		
-		For Local i:Int=0 Until TWindow.windows.Length
-			TWindow.windows[i].Render( False )
+		For Local i:Int=0 Until _windows.Length
+			If _windows[i].Hidden() Then Continue
+			_windows[i].Render( False )
 		Next
 		
-		_fps:+1
-		If MilliSecs()-_fpsTime>=1000
-			fps=_fps
-			_fps=0
-			_fpsTime=MilliSecs()
-		End If
-	End Method
+		UpdateFps()
+	End Function
 	
 	Function Interpolate:Float( oldValue:Float,value:Float ) NoDebug
 		Return oldValue+( value-oldValue )*tween
@@ -176,49 +211,56 @@ Type TFixedLogicApp Extends TApp
 	
 	Private
 	
-	Field _hertz:Int=60
-	Field _upTime:Float=1000.0/60.0
-	Field _ticker:Float
+	Global _hertz:Int=60
+	Global _upTime:Float=1000.0/60.0
+	Global _ticker:Float
 End Type
 
 Function Interpolate:Float( oldValue:Float,value:Float ) NoDebug
-	Return oldValue+( value-oldValue )*TFixedLogicApp.tween
+	Return oldValue+( value-oldValue )*FixedLogicApp.tween
 End Function
 
 Rem
 	bbdoc: Delta time application.
 End Rem
-Type TDeltaTimeApp Extends TApp
+Type DeltaTimeApp Extends App
 	
 	Global dt:Float=1.0
 	
-	Method New( freq:Int )
-		Super.New()
+	Function Init( freq:Int=60 )
 		Hertz( freq )
-	End Method
+	End Function
 	
-	Method Hertz:Int()
+	Function Hertz:Int()
 		Return _hertz
-	End Method
+	End Function
 	
-	Method Hertz( value:Int )
+	Function Hertz( value:Int )
 		_hertz=value
 		_upTime=1000.0/Float( _hertz )
-	End Method
+	End Function
 	
-	Method Update() Override
+	Function Update() Override
+		
+		If _suspend
+			Repeat
+				Delay( 100 )
+				PollSystem()
+				If Not _suspend Then Exit
+			Forever
+		End If
 		
 		Local frameTime:Int=MilliSecs()
 		
 		TJoystick.Update()
-		If TWindow.active
-			TWindow.active.OnUpdate( dt )
-			TWindow.active.Render( False )
+		If _active
+			_active.OnUpdate( dt )
+			_active.Render( False )
 		End If
-		For Local window:TWindow=EachIn TWindow.windows
-			If window=TWindow.active Then Continue
-			window.OnUpdate( dt )
-			window.Render( False )
+		For Local i:Int=0 Until _windows.Length
+			If _windows[i]=_active Then Continue
+			_windows[i].OnUpdate( dt )
+			_windows[i].Render( False )
 		Next
 		PollSystem()
 		
@@ -226,16 +268,11 @@ Type TDeltaTimeApp Extends TApp
 		
 		dt=frameTime/_upTime
 		
-		_fps:+1
-		If MilliSecs()-_fpsTime>=1000
-			fps=_fps
-			_fps=0
-			_fpsTime=MilliSecs()
-		End If
-	End Method
+		UpdateFps()
+	End Function
 	
 	Private
 	
-	Field _hertz:Int=60
-	Field _upTime:Float=1000.0/60.0
+	Global _hertz:Int=60
+	Global _upTime:Float=1000.0/60.0
 End Type

@@ -61,9 +61,8 @@ Type TMyWindow Extends TExampleWindow
 	End Method
 End Type
 
-New TDeltaTimeApp
 New TMyWindow
 
 Repeat
-	App.Update()
+	DeltaTimeApp.Update()
 Forever

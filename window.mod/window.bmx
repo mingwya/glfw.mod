@@ -103,9 +103,9 @@ Type TWindow
 		
 		Assert _windowPtr,"window not created!"
 		
-		If flags&WindowFlags.Hidden Then Hide() Else active=Self
+		If flags&WindowFlags.Hidden Then Hide() Else App._active=Self
 		
-		windows:+[Self]
+		App.AddWindow( Self )
 		
 		Local xp:Int=30,yp:Int=30
 		If flags&WindowFlags.CenterX Then xp=DesktopWidth() Shr 1-width Shr 1
@@ -147,6 +147,7 @@ Type TWindow
 		_canvas=New TCanvas( width,height )
 		
 		If flags&WindowFlags.AutoRender Then _reqRender=2
+		If flags&WindowFlags.Console 	Then TConsole.Init()
 		
 		_flags=flags
 		
@@ -162,17 +163,10 @@ Type TWindow
 	End Rem
 	Method Free()
 		If _windowPtr
+			OnClose()
+			App.RemWindow( Self )
 			bmx_glfw_glfwDestroyWindow( _windowPtr )
 			_windowPtr=Null
-			
-			For Local i:Int=0 Until windows.Length
-				If windows[i]=Self
-					windows=windows[..i-1]+windows[i+1..]
-					Exit
-				End If
-			Next
-		End If
-		If _vao
 			DelVao( _vao )
 			_vao=0
 		End If
@@ -207,6 +201,12 @@ Type TWindow
 		bbdoc:
 	End Rem
 	Method OnMinimize()
+	End Method
+	
+	Rem
+		bbdoc:
+	End Rem
+	Method OnRestore()
 	End Method
 	
 	Rem
@@ -501,12 +501,7 @@ Type TWindow
 	
 	Private
 	
-	Global active:TWindow
-	Global windows:TWindow[0]
-	
 	Global context:Byte Ptr
-	
-	Global drawFps:Byte, drawMem:Byte
 	
 	Field _windowPtr:Byte Ptr
 	Field _vao:Int
@@ -567,14 +562,15 @@ Type TWindow
 		_canvas.Font( Null )
 		_canvas.LineWidth( 1 )
 		
-		Local info:String
-		If drawFps Then info:+" Fps:"+TApp.fps
-		If drawMem Then info:+" Mem:"+GCMemAlloced()
-		If info<>""
-			_canvas.DrawText( info,10,10 )
-		End If
-		
 		If _flags&WindowFlags.Console
+			
+			Local info:String
+			If TConsole.Variable( "fps" ).ToInt() Then info:+" Fps:"+App.fps
+			If TConsole.Variable( "memory" ).ToInt() Then info:+" Mem:"+GCMemAlloced()
+			If info<>""
+				_canvas.DrawText( info,10,10 )
+			End If
+		
 			'_canvas.ResetMatrix()
 			'_canvas.Color( 1,1,1,1 )
 			'_canvas.BlendMode( TBlendMode.Alpha )
@@ -590,22 +586,23 @@ Type TWindow
 	End Method
 	
 	'console commands
-	Function cmdFps()
-		drawFps=1-drawFps
-	End Function
+	'Function cmdFps()
+	'	drawFps=1-drawFps
+	'End Function
 	
-	Function cmdMemory()
-		drawMem=1-drawMem
-	End Function
+	'Function cmdMemory()
+	'	drawMem=1-drawMem
+	'End Function
 	
-	Function cmdClearMode()
-		If Not active Then Return
-		active.ClearEnabled( 1-active.ClearEnabled() )
+	Function cmdClearMode( mode:Int )
+		If Not App._active Then Return
+		App._active.ClearEnabled( mode>0 )
+		Print( "Clear mode set:"+mode )
 	End Function
 	
 	Function cmdLayout()
-		If Not active Then Return
-		active.Layout( ( active.Layout()+1 ) Mod 3 )
+		If Not App._active Then Return
+		App._active.Layout( ( App._active.Layout()+1 ) Mod 3 )
 	End Function
 	
 	'Function _OnContentScale( windowPtr:Byte Ptr,xScale:Float,yScale:Float )
@@ -617,7 +614,9 @@ Type TWindow
 	'End Function
 	
 	Function _OnFramebufferSize( windowPtr:Byte Ptr,width:Int,height:Int )
-		For Local w:TWindow=EachIn windows
+		For Local i:Int=0 Until App._countWindows
+			Local w:TWindow=App._windows[i]
+			
 			If w._windowPtr<>windowPtr Then Continue
 			
 			w._canvas.RenderTarget( width,height )
@@ -678,21 +677,21 @@ Type TWindow
 	End Function
 	
 	Function _OnFocus( windowPtr:Byte Ptr,focused:Int )
-		For Local window:TWindow=EachIn windows
+		For Local window:TWindow=EachIn App._windows
 			If window._windowPtr<>windowPtr Then Continue
 			If focused
+				App._active=window
 				window.OnFocus()
-				active=window
 			Else
 				window.OnLostFocus()
-				If active=window Then active=Null
+				If App._active=window Then App._active=Null
 			End If
 			Return
 		Next
 	End Function
 	
 	Function _OnClose( windowPtr:Byte Ptr )
-		For Local w:TWindow=EachIn windows
+		For Local w:TWindow=EachIn App._windows
 			If w._windowPtr<>windowPtr Then Continue
 			w.OnClose()
 			Return
@@ -700,23 +699,29 @@ Type TWindow
 	End Function
 	
 	Function _OnMinimize( windowPtr:Byte Ptr,minimized:Int )
-		For Local w:TWindow=EachIn windows
+		For Local w:TWindow=EachIn App._windows
 			If w._windowPtr<>windowPtr Then Continue
-			If minimized Then w.OnMinimize()
+			If minimized
+				w.OnMinimize()
+				w._hidden=True
+			Else
+				w._hidden=False
+				w.OnRestore()
+			End If
 			Return
 		Next
 	End Function
 	
 	Function _OnMaximize( windowPtr:Byte Ptr,maximized:Int )
-		For Local w:TWindow=EachIn windows
+		For Local w:TWindow=EachIn App._windows
 			If w._windowPtr<>windowPtr Then Continue
 			If maximized Then w.OnMaximize()
 			Return
 		Next
 	End Function
 	
-	Function _OnRefresh(windowPtr:Byte Ptr)
-		For Local w:TWindow=EachIn windows
+	Function _OnRefresh( windowPtr:Byte Ptr )
+		For Local w:TWindow=EachIn App._windows
 			If w._windowPtr<>windowPtr Then Continue
 			'DebugLog "Refresh"
 			Return

@@ -95,9 +95,8 @@ Type TShaderEffect
 	
 End Type
 
-New TDeltaTimeApp
 New TMyWindow
 
 Repeat
-	App.Update()
+	DeltaTimeApp.Update()
 Forever

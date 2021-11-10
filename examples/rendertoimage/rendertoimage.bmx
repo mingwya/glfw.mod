@@ -30,7 +30,6 @@ Type TMyWindow Extends TExampleWindow
 	End Method
 End Type
 
-New TApp
 New TMyWindow( Null )
 
 Repeat
