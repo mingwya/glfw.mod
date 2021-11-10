@@ -392,7 +392,11 @@ Type TConsole
 	End Function
 	
 	Function cmdHelp()
-		Print("<$FF999999>+----------------------------------</$>")
+		Print("<$FF999999>+--------------VARIABLES--------------------</$>")
+		For Local vk:String=EachIn vars.Keys()
+			Print( vk )
+		Next
+		Print("<$FF999999>+---------------FUNCTIONS----------------</$>")
 		For Local i:Int=0 Until names.Length
 			If names[i]="help" Then Continue
 			Print("<$FF999999>|-"+names[i]+"</>")

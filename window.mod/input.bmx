@@ -1,6 +1,9 @@
 
 Public
 
+Rem
+	bbdoc: Key modifiers.
+End Rem
 Type Modifier
 	Const Any:Int	=-1
 	
@@ -44,7 +47,7 @@ Type Key
 	
 	Const Right:Int=262, Left:Int=263, Up:Int=265, ARROW_DOWN:Int=264 'DOWN:Int=264, UP:Int=265
 	
-	Const PAGE_UP:Int=266, PAGE_DOWN:Int=267
+	Const PAGE_UP:Int=266, PAGE_DOWN:Int=267, PAGE_DN:Int=PAGE_DOWN
 	Const HOME:Int=268, KEND:Int=269
 	Const CAPS_LOCK:Int=280, SCROLL_LOCK:Int=281, NUM_LOCK:Int=282
 	Const PRINT_SCREEN:Int=283
@@ -85,14 +88,14 @@ Type Key
 	End Rem
 	Function Hit:Int( code:Int,mods:Int=Modifier.Any )
 		If code<10 Then code:+48
-		Local state:Int=_States[code,0] And Not _States[code,1]
-		_States[code,1]=_States[code,0]
+		Local state:Int=_states[code] And Not _states[code+STATE_OLD]
+		_states[code+STATE_OLD]=_states[code]
 		If Not state Then Return False
 		
 		Select mods
 		Case Modifier.ANY 	Return True
-		Case Modifier.NONE	Return _States[code,2]=0
-		Default				Return _States[code,2]&mods
+		Case Modifier.NONE	Return _states[code+STATE_MODS]=0
+		Default				Return _states[code+STATE_MODS]&mods
 		End Select
 	End Function
 	
@@ -109,12 +112,12 @@ Type Key
 	End Rem
 	Function Down:Int( code:Int,mods:Int=Modifier.Any )
 		If code<10 Then code:+48
-		If Not _States[code,0] Then Return False
+		If Not _states[code] Then Return False
 		
 		Select mods
 		Case Modifier.ANY 	Return True
-		Case Modifier.NONE	Return _States[code,2]=0
-		Default				Return _States[code,2]&mods
+		Case Modifier.NONE	Return _states[code+STATE_MODS]=0
+		Default				Return _states[code+STATE_MODS]&mods
 		End Select
 	End Function
 	
@@ -130,14 +133,14 @@ Type Key
 	See the #{key codes} module for a list of valid keycodes.
 	End Rem
 	Function Rep:Int( code:Int,mods:Int=Modifier.Any )
-		Local r:Int=_Repeats[code,0]
-		_Repeats[code,0]=False
+		Local r:Int=_states[code+STATE_REPEAT] ',0]
+		_states[code+STATE_REPEAT]=False
 		If Not r Then Return False
 		
 		Select mods
 		Case Modifier.ANY	Return True
-		Case Modifier.NONE	Return _Repeats[code,1]=0
-		Default				Return _Repeats[code,1]&mods
+		Case Modifier.NONE	Return _states[code+STATE_MODS]=0
+		Default				Return _states[code+STATE_MODS]&mods
 		End Select
 	End Function
 	
@@ -158,9 +161,9 @@ Type Key
 	If the character queue is empty, 0 is returned.
 	End Rem
 	Function Char:Int()
-		If _Get=_Put Then Return 0
-		Local n:Int=_Queue[_Get&255]
-		_Get:+1
+		If _get=_put Then Return 0
+		Local n:Int=_queue[_get&255]
+		_get:+1
 		Return n
 	End Function
 	
@@ -173,13 +176,7 @@ Type Key
 	Function Flush()
 		_Get=0
 		_Put=0
-		For Local i:Int=0 To LAST
-			_States[i,0]=0
-			_States[i,1]=0
-			_States[i,2]=0
-			_Repeats[i,0]=0
-			_Repeats[i,1]=0
-		Next
+		MemClear( _states,Size_T( COUNT*4 ) )
 	End Function
 	
 	Rem
@@ -208,31 +205,33 @@ Type Key
 	
 	Private
 	
-	Global _States:Byte[LAST+1,3] ' current state,old state,modifier
-	Global _Repeats:Byte[LAST+1,2]
-	Global _Get:Int,_Put:Int,_Queue:Int[256]
+	Const STATE_OLD:Int=COUNT
+	Const STATE_REPEAT:Int=COUNT*2
+	Const STATE_MODS:Int=COUNT*3
+	
+	Global _states:Byte Ptr=MemAlloc( COUNT*4 ) 'state\oldState\repeat\mods
+	Global _get:Int,_put:Int
+	Global _queue:Int Ptr=Int Ptr( MemAlloc( 1024 ) )
 	
 	Function OnKey( windowPtr:Byte Ptr,Key:Int,scancode:Int,action:Int,mods:Int)
 		If Key=-1 Then Return
 		
 		'DebugLog "key:"+key+",scancode:"+scancode+",action:"+action+",mods:"+mods
 		If action=2
-			_Repeats[Key,0]=True
-			_Repeats[Key,1]=mods
+			_states[Key+STATE_REPEAT]=True
+			_states[Key+STATE_MODS]=mods
 			Return
 		End If
-		_States[Key,0]=action
-		_States[Key,2]=mods
-			
-		_Repeats[Key,0]=action
-		_Repeats[Key,1]=mods
+		_states[Key]=action
+		_states[Key+STATE_REPEAT]=True 'mods
+		_states[Key+STATE_MODS]=mods
 	End Function
 	
 	Function OnChar( windowPtr:Byte Ptr,char:UInt )
 		'DebugLog "char:"+char
-		If ( _Get-_Put )<256
-			_Queue[_Put&255]=char
-			_Put:+1
+		If ( _get-_put )<256
+			_queue[_put&255]=char
+			_put:+1
 		End If
 	End Function
 End Type
@@ -244,10 +243,6 @@ Type Mouse
 	Const Left:Int=1
 	Const Right:Int=2
 	Const Middle:Int=3
-	
-	'Function ToString:String()
-		'Local s:String="Mouse( button:"+
-	'End Function
 	
 	Rem
 	bbdoc: Check for mouse button click
@@ -261,14 +256,14 @@ Type Mouse
 	End Rem
 	Function Hit:Int( code:Int=Left,mods:Int=Modifier.Any )
 		code:-1
-		Local state:Int=_States[code,0] And Not _States[code,1]
-		_States[code,1]=_States[code,0]
+		Local state:Int=_states[code] And Not _states[code+3]
+		_states[code+3]=_states[code]
 		If Not state Then Return False
 		
 		Select mods
 		Case Modifier.ANY 	Return True
-		Case Modifier.NONE	Return _States[code,2]=0
-		Default				Return _States[code,2]&mods
+		Case Modifier.NONE	Return _states[code+6]=0
+		Default				Return _states[code+6]&mods
 		End Select
 	End Function
 	
@@ -281,12 +276,12 @@ Type Mouse
 	End Rem
 	Function Down:Int( code:Int=Left,mods:Int=Modifier.Any )
 		code:-1
-		If Not _States[code,0] Then Return False
+		If Not _States[code] Then Return False
 		
 		Select mods
 		Case Modifier.ANY 	Return True
-		Case Modifier.NONE  Return _States[code,2]=0
-		Default 			Return _States[code,2]&mods
+		Case Modifier.NONE  Return _States[code+6]=0
+		Default 			Return _States[code+6]&mods
 		End Select
 	End Function
 	
@@ -295,8 +290,8 @@ Type Mouse
 	returns: Mouse x speed
 	End Rem
 	Function XSpeed:Float()
-		Local speed:Float=_Location[0,0]-_Location[0,1]
-		_Location[0,1]=_Location[0,0]
+		Local speed:Float=_Location[0]-_Location[2]
+		_Location[2]=_Location[0]
 		Return speed
 	End Function
 	
@@ -305,8 +300,8 @@ Type Mouse
 	returns: Mouse y speed
 	End Rem
 	Function YSpeed:Float()
-		Local speed:Float=_Location[1,0]-_Location[1,1]
-		_Location[1,1]=_Location[1,0]
+		Local speed:Float=_Location[1]-_Location[3]
+		_Location[3]=_Location[1]
 		Return speed
 	End Function
 	
@@ -327,7 +322,7 @@ Type Mouse
 	the current window or graphics display.
 	End Rem
 	Function Location:Float[]()
-		Return [ _Location[0,0],_Location[1,0] ]
+		Return [ _Location[0],_Location[1] ]
 	End Function
 	
 	Rem
@@ -359,7 +354,7 @@ Type Mouse
 	The returned value is relative to the left of the screen.
 	End Rem
 	Function X:Float()
-		Return _Location[0,0]
+		Return _Location[0]
 	End Function
 	
 	Rem
@@ -370,7 +365,7 @@ Type Mouse
 	End Rem
 	Function X( v:Float )
 		If Not App._active Then Return
-		bmx_glfw_glfwSetCursorPos( App._active._windowPtr,v,_Location[1,0] )
+		bmx_glfw_glfwSetCursorPos( App._active._windowPtr,v,_Location[1] )
 	End Function
 	
 	Rem
@@ -380,7 +375,7 @@ Type Mouse
 	The returned value is relative to the top of the screen.
 	End Rem
 	Function Y:Float()
-		Return _Location[1,0]
+		Return _Location[1]
 	End Function
 	
 	Rem
@@ -391,7 +386,7 @@ Type Mouse
 	End Rem
 	Function Y( v:Float )
 		If Not App._active Then Return
-		bmx_glfw_glfwSetCursorPos( App._active._windowPtr,_Location[0,0],v )
+		bmx_glfw_glfwSetCursorPos( App._active._windowPtr,_Location[0],v )
 	End Function
 	
 	Rem
@@ -400,16 +395,8 @@ Type Mouse
 	#FlushMouse resets the state of all mouse buttons to 'off'.
 	End Rem
 	Function Flush()
-		Local i:Int
-		For i=0 Until 3
-			_States[i,0]=0
-			_States[i,1]=0
-			_States[i,2]=0
-		Next
-		For i=0 Until 2
-			_Location[i,0]=0
-			_Location[i,1]=0
-		Next
+		MemClear( _states,Size_T( 9 ) )
+		MemClear( _location,Size_T( 16 ) )
 		_ZSpeed=0
 	End Function
 	
@@ -489,31 +476,32 @@ Type Mouse
 		Next
 	End Function
 	
-	Global _States:Byte[3,3] 'state,old,mods
-	Global _Location:Float[2,2]
+	Global _States:Byte Ptr=MemAlloc( 9 ) 'state,old,mods
+	Global _Location:Float Ptr=Float Ptr( MemAlloc( 16 ) )
 	Global _ZSpeed:Float
 	
-	Global in:Float[2],out:Float[2]
+	Global in:Float[2]
+	Global out:Float[2]
 	
 	Function OnCursorPosition( windowPtr:Byte Ptr,x:Double,y:Double )
 		If Not App._active Then Return
 		If windowPtr<>App._active._windowPtr Then Return
 		
-		_Location[0,1]=_Location[0,0]
-		_Location[1,1]=_Location[1,0]
+		_Location[2]=_Location[0]
+		_Location[3]=_Location[1]
 		in[0]=Float( x )
 		in[1]=Float( y )
 		
 		App._active._canvas.TransformCoords( in,out )
 		
-		_Location[0,0]=out[0]
-		_Location[1,0]=out[1]
+		_Location[0]=out[0]
+		_Location[1]=out[1]
 	End Function
 	
 	Function OnButton( windowPtr:Byte Ptr,button:Int,action:Int,mods:Int )
 		If button>2 Then Return
-		_States[button,0]=action
-		_States[button,2]=mods
+		_States[button]=action
+		_States[button+6]=mods '3*2
 	End Function
 	
 	Function OnScroll( windowPtr:Byte Ptr,xOffset:Double,yOffset:Double )
@@ -697,7 +685,7 @@ Type TJoystick
 	returns: True if the button is pressed.
 	End Rem
 	Method Down:Int( button:Int )
-		Return states[id,button]
+		Return states[id Shl 4+button]
 	End Method
 	
 	Rem
@@ -708,8 +696,9 @@ Type TJoystick
 	the last call to #JoyHit with the same specified @button.
 	End Rem
 	Method Hit:Int( button:Int )
-		Local state:Int=states[id,button] And oldStates[id,button]=False
-		oldStates[id,button]=states[id,button]
+		Local i:Int=id Shl 4+button
+		Local state:Int=states[i] And Not oldStates[i]
+		oldStates[i]=states[i]
 		Return state
 	End Method
 	
@@ -727,10 +716,8 @@ Type TJoystick
 	bbdoc: Flush joystick button states.
 	End Rem
 	Method Flush()
-		For Local i:Int=0 Until 16
-			states[id,i]=0
-			oldStates[id,i]=0
-		Next
+		MemClear( states,Size_T( 256 ) )
+		MemClear( oldStates,Size_T( 256 ) )
 	End Method
 	
 	Private
@@ -739,20 +726,21 @@ Type TJoystick
 	
 	Global use:Int
 	
-	Global states:Byte[16,16] 'joyId,buttonId
-	Global oldStates:Byte[16,16]
+	Global states:Byte Ptr=MemAlloc( 256 )
+	Global oldStates:Byte Ptr=MemAlloc( 256 )
 	
 	Function Update()
-	
 		If Not use Then Return
 		
 		Local count:Int
 		For Local id:Int=0 Until GLFW_JOYSTICK_LAST
 			If Not bmx_glfw_glfwJoystickPresent( id ) Then Return
 			Local s:Byte Ptr=bmx_glfw_glfwGetJoystickButtons( id,count )
+			count=Min( count,16 )
 			For Local button:Int=0 Until count
-				states[id,button]=s[button]
-				If Not s[button] Then oldStates[id,button]=False
+				Local i:Int=id Shl 4+button
+				states[i]=s[button]
+				If Not s[button] Then oldStates[i]=False 'oldStates[id,button]=False
 			Next
 		Next
 	End Function

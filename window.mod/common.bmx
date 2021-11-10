@@ -107,6 +107,8 @@ Extern
 	Function bmx_glfw_glfwSetCharCallback:Byte Ptr(window:Byte Ptr, func(win:Byte Ptr, char:UInt))="glfwSetCharCallback"
 	Function bmx_glfw_glfwSetCharModsCallback:Byte Ptr(window:Byte Ptr, func(win:Byte Ptr, codepoint:UInt, mods:Int))="glfwSetCharModsCallback"
 	
+	'Function bmx_glfw_glfwSetDropCallback:Byte Ptr(window:Byte Ptr, func(win:Byte Ptr, path_count:Int,paths))="glfwSetDropCallback"
+	
 	Function bmx_glfw_glfwCreateStandardCursor:Byte Ptr(shape:Int)="glfwCreateStandardCursor"
 	Function bmx_glfw_glfwDestroyCursor(Cursor:Byte Ptr)="glfwDestroyCursor"
 	Function bmx_glfw_glfwSetCursor(window:Byte Ptr, Cursor:Byte Ptr)="glfwSetCursor"

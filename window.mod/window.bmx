@@ -155,7 +155,7 @@ Type TWindow
 		bmx_glfw_glfwSetInputMode( _windowPtr,GLFW_CURSOR,Mouse._visible )
 		bmx_glfw_glfwSetCursor( _windowPtr,Cursor.cursors[Mouse._cursor]._cursor.cursorPtr )
 		
-		Layout( 2 ) '_layout )
+		Layout( _layout )
 	End Method
 	
 	Rem
@@ -224,7 +224,7 @@ Type TWindow
 	Rem
 		bbdoc:
 	End Rem
-	Method OnFocus()
+	Method OnFocus() ' focused:Int )
 	End Method
 	
 	Rem
@@ -232,6 +232,12 @@ Type TWindow
 	End Rem
 	Method OnLostFocus()
 	End Method
+	
+	Rem
+		bbdoc:
+	End Rem
+	'Method OnDrop( paths:String[] )
+	'End Method
 	
 	Rem
 		bbdoc: The window clear color.
