@@ -31,12 +31,12 @@ Type App
 		
 		TJoystick.Update()
 		If _active
-			_active.OnUpdate()
+			_active.Update()
 			_active.Render( False )
 		End If
 		For Local i:Int=0 Until _countWindows
 			If _windows[i]=_active Then Continue
-			_windows[i].OnUpdate()
+			_windows[i].Update()
 			_windows[i].Render( False )
 		Next
 		PollSystem()
@@ -185,12 +185,12 @@ Type FixedLogicApp Extends App
 			
 			TJoystick.Update()
 			If _active And Not _active.Hidden()
-				_active.OnUpdate()
+				_active.Update()
 			End If
 			For Local i:Int=0 Until _windows.Length
 				If _windows[i]=_active Then Continue
 				If _windows[i].Hidden() Then Continue
-				_windows[i].OnUpdate()
+				_windows[i].Update()
 			Next
 			PollSystem()
 		Next
@@ -254,12 +254,12 @@ Type DeltaTimeApp Extends App
 		
 		TJoystick.Update()
 		If _active
-			_active.OnUpdate( dt )
+			_active.Update( dt )
 			_active.Render( False )
 		End If
 		For Local i:Int=0 Until _windows.Length
 			If _windows[i]=_active Then Continue
-			_windows[i].OnUpdate( dt )
+			_windows[i].Update( dt )
 			_windows[i].Render( False )
 		Next
 		PollSystem()

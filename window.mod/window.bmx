@@ -16,6 +16,7 @@ Include "common.bmx"
 Include "app.bmx"
 Include "console.bmx"
 Include "input.bmx"
+'Include "widget.bmx"
 
 Public
 
@@ -50,6 +51,7 @@ Type WindowFlags
 	Const Minimized:Int	=128
 	Const AutoRender:Int=256
 	Const Console:Int	=512
+	'Const Widget:Int	=1024
 End Type
 
 Rem
@@ -148,6 +150,7 @@ Type TWindow
 		
 		If flags&WindowFlags.AutoRender Then _reqRender=2
 		If flags&WindowFlags.Console 	Then TConsole.Init()
+		'If flags&WindowFlags.Widget		Then _desktop=New TDesktop ; WriteStdout("window+desktop~n")
 		
 		_flags=flags
 		
@@ -505,6 +508,17 @@ Type TWindow
 		Return OnMeasure()[1]
 	End Method
 	
+	'Method AddWidget( widget:TWidget )
+	'	If _desktop
+	'		If _desktop.childs.Contains( widget ) Then Return
+	'		_desktop.childs.AddLast( widget )
+	'	End If
+	'End Method
+	
+	'Method RemoveWidget( widget:TWidget )
+	'	If _desktop Then _desktop.childs.Remove( widget )
+	'End Method
+	
 	Private
 	
 	Global context:Byte Ptr
@@ -532,6 +546,8 @@ Type TWindow
 	
 	Field _clearColor:Float[]=[0.0,0.0,0.0,1.0]
 	Field _clearEnabled:Int=True
+	
+	'Field _desktop:TDesktop
 	
 	Method Render( raw:Int=False )
 		If _hidden Then Return
@@ -568,6 +584,8 @@ Type TWindow
 		_canvas.Font( Null )
 		_canvas.LineWidth( 1 )
 		
+		'If _desktop Then _desktop.OnRender( _canvas )
+		
 		If _flags&WindowFlags.Console
 			
 			Local info:String
@@ -589,6 +607,16 @@ Type TWindow
 		_canvas.Flush()
 		
 		bmx_glfw_glfwSwapBuffers( _windowPtr )
+	End Method
+	
+	Method Update()
+		'If _desktop Then _desktop.OnUpdate()
+		OnUpdate()
+	End Method
+	
+	Method Update( dt:Float )
+		'If _desktop Then _desktop.OnUpdate( dt )
+		OnUpdate( dt )
 	End Method
 	
 	'console commands

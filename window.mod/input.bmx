@@ -215,15 +215,9 @@ Type Key
 	
 	Function OnKey( windowPtr:Byte Ptr,Key:Int,scancode:Int,action:Int,mods:Int)
 		If Key=-1 Then Return
-		
 		'DebugLog "key:"+key+",scancode:"+scancode+",action:"+action+",mods:"+mods
-		If action=2
-			_states[Key+STATE_REPEAT]=True
-			_states[Key+STATE_MODS]=mods
-			Return
-		End If
-		_states[Key]=action
-		_states[Key+STATE_REPEAT]=True 'mods
+		If action<>2 Then _states[Key]=action
+		_states[Key+STATE_REPEAT]=action>0 'mods
 		_states[Key+STATE_MODS]=mods
 	End Function
 	
